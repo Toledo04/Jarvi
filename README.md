@@ -21,13 +21,62 @@ consistent. The current environment is Python 3.13.
    provider and LangSmith keys only in `.env`; it is ignored by git.
 4. Run Python commands through uv, for example `uv run python --version`.
 
-The starter dependencies are FastAPI and Uvicorn for the web app, plus
-LangChain, LangGraph, LangSmith, and Deep Agents for the agent stack. Model
-provider integrations are separate packages in LangChain, so we will add the
-one matching our chosen provider when we implement the first agent.
+The project uses FastAPI and Uvicorn for the web app, plus LangChain, LangGraph,
+LangSmith, and Deep Agents for the agent stack. Ollama is the current local
+model provider.
 
 ## First milestone
 
-The environment is the first milestone. The next small feature should be a
-web health endpoint, before adding an agent or a frontend. That gives us a
-working web app to build on and a simple way to verify it locally.
+The first milestone is a web health endpoint. Start the development server:
+
+```bash
+uv run --env-file .env uvicorn app:app --reload
+```
+
+Open <http://127.0.0.1:8000/health> in a browser. It should return
+`{"status":"ok"}`. FastAPI's interactive API page is at
+<http://127.0.0.1:8000/docs>.
+
+The agent endpoint is `POST /chat`. It accepts a message such as
+`{"message":"What is the latest price for AAPL?"}` and returns a reply. The
+local model is configured by `OLLAMA_MODEL` in `.env`. Install Ollama, start its
+local service, and download the selected model before calling `/chat`:
+
+```bash
+ollama pull llama3.2:3b
+```
+
+Create `.env` from `.env.example` and add your Alpaca API credentials there
+before asking the agent for stock data. Keep those credentials out of Git. Use
+the interactive `/docs` page to try `/chat`. The agent uses the Alpaca stock
+data function internally through its `lookup_stock_quote` tool; there is no
+separate public quote endpoint.
+
+## Code organization
+
+- `app.py` handles HTTP routes and translates application errors into HTTP responses.
+- `market_data.py` talks to Alpaca and normalizes its response.
+- `schemas.py` defines the JSON request and response shapes for chat.
+- `stock_agent.py` defines the quote tool and the LangChain agent that uses it.
+
+FastAPI generates the interactive `/docs` page from the route and response
+schema. The JSON response is the API's presentation layer; this project does
+not have an HTML frontend yet.
+
+## Testing environment
+
+For now, tests run in the same `.venv` as development, but use fake external
+services. This keeps setup small while making tests repeatable: they do not
+load `.env`, contact Alpaca, or need Alpaca credentials. The Alpaca HTTP call
+is replaced with a fake response in `tests/test_market_data.py`.
+
+Run the tests with:
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
+
+The test command intentionally does not use `--env-file .env`. Later, if the
+project needs different installed package versions, a CI runner, or test-only
+services, we can give testing more isolation. A separate virtual environment
+is not necessary for these first unit tests.
