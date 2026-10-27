@@ -1,0 +1,17 @@
+[project]
+name = "jaarvi"
+version = "0.1.0"
+description = "A small learning project for building web apps with agents."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents",
+    "fastapi",
+    "langchain",
+    "langgraph",
+    "langsmith",
+    "uvicorn[standard]",
+]
+
+[tool.uv]
+package = false
